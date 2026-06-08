@@ -1,0 +1,857 @@
+---
+title: "RRR"
+output: html_document
+date: "2025-12-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r} #
+Package: DataTrans
+Title: Comprehensive Data Transformation Tools
+Version:1.0.0
+Authors@R: 
+    person(given = "Alyamama",
+           family = "Alyamama",
+           role = c("aut", "cre"),
+           email = "alyamama@example.com",
+           comment = c(ORCID = "YOUR-ORCID-ID"))
+Description: Provides a comprehensive suite of data transformation and 
+    preprocessing functions for statistical analysis and machine learning. 
+    Includes tools for normalization, encoding, missing value imputation, 
+    outlier detection, and feature engineering.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.1
+Imports:
+    dplyr (>= 1.0.0),
+    tibble (>= 3.0.0),
+    stats,
+    utils,
+    FNN (>= 1.1.3)
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    ggplot2
+VignetteBuilder: knitr
+```
+
+
+```{r}
+#' DataTrans: A Package for Engineering Data Transformation and Analysis
+#'
+#' @description
+#' The DataTrans package provides specialized tools for engineering data
+#' preprocessing, transformation, and analysis. Originally developed for
+#' turbine performance data, it offers general-purpose data transformation
+#' functions applicable to various engineering and scientific datasets.
+#'
+#' @section Main Functions:
+#' \itemize{
+#'   \item \code{\link{load_turbine_data}}: Load and prepare turbine dataset
+#'   \item \code{\link{normalize_data}}: Normalize numerical variables
+#'   \item \code{\link{clean_engineering_data}}: Clean engineering datasets
+#'   \item \code{\link{detect_outliers}}: Detect statistical outliers
+#'   \item \code{\link{analyze_correlations}}: Analyze variable correlations
+#'   \item \code{\link{plot_turbine_performance}}: Visualize turbine performance
+#' }
+#'
+#' @docType package
+#' @name DataTrans
+#' @keywords internal
+"_PACKAGE"
+
+# Package environment for storing settings
+.datatrans_env <- new.env(parent = emptyenv())
+
+#' @import dplyr
+#' @import ggplot2
+#' @importFrom tibble as_tibble
+#' @importFrom stats sd median cor
+#' @importFrom tidyr drop_na pivot_longer
+NULL
+```
+
+```{r}
+#' Load Turbine Thrust Dataset
+#'
+#' @description
+#' Loads the turbine thrust dataset included with the package or from a file.
+#' This dataset contains turbine performance measurements with thrust (y) as
+#' the response variable and six predictor variables (x1-x6).
+#'
+#' @param filepath Optional path to Excel or CSV file. If NULL, uses built-in data.
+#' @param use_builtin Logical. If TRUE, uses built-in dataset (default).
+#'
+#' @return A tibble containing the turbine data with columns:
+#' \itemize{
+#'   \item y: Thrust output (response variable)
+#'   \item x1-x6: Predictor variables
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' # Use built-in data
+#' data <- load_turbine_data()
+#' 
+#' # Load from file
+#' data <- load_turbine_data("turbine_thrust.xlsx")
+#' }
+#'
+#' @export
+load_turbine_data <- function(filepath = NULL, use_builtin = TRUE) {
+  if (use_builtin || is.null(filepath)) {
+    # Create built-in dataset from provided data
+    turbine_data <- tibble::tibble(
+      y = c(4540, 4315, 4095, 3650, 3200, 4833, 4617, 4340, 3820, 3368,
+            4445, 4188, 3981, 3622, 3125, 4560, 4340, 4115, 3630, 3210,
+            4330, 4119, 3891, 3467, 3045, 4411, 4203, 3968, 3531, 3074,
+            4350, 4128, 3940, 3480, 3064, 4402, 4180, 3973, 3530, 3080),
+      x1 = c(2140, 2016, 1905, 1675, 1474, 2239, 2120, 1990, 1702, 1487,
+             2107, 1973, 1864, 1674, 1440, 2165, 2048, 1916, 1658, 1489,
+             2062, 1929, 1815, 1595, 1400, 2047, 1935, 1807, 1591, 1388,
+             2071, 1944, 1831, 1612, 1410, 2066, 1954, 1835, 1616, 1407),
+      x2 = c(20640, 20280, 19860, 18980, 18100, 20740, 20305, 19961, 18916, 18012,
+             20520, 20130, 19780, 19020, 18030, 20680, 20340, 19860, 18950, 18700,
+             20500, 20050, 19680, 18890, 17870, 20540, 20160, 19750, 18890, 17870,
+             20460, 20010, 19640, 18710, 17780, 20520, 20150, 19750, 18850, 17910),
+      x3 = c(30250, 30010, 29780, 29330, 28960, 30083, 29831, 29604, 29088, 28675,
+             30120, 29920, 29720, 29370, 28940, 30160, 29960, 29710, 29250, 28890,
+             30190, 29960, 29770, 29360, 28960, 30160, 29940, 29760, 29350, 28910,
+             30180, 29940, 29750, 29360, 28900, 30170, 29950, 29740, 29320, 28910),
+      x4 = c(205, 195, 184, 164, 144, 216, 206, 196, 171, 149,
+             195, 190, 180, 161, 139, 208, 199, 187, 164, 145,
+             193, 183, 173, 153, 134, 193, 184, 173, 153, 133,
+             198, 186, 178, 156, 136, 197, 188, 178, 156, 137),
+      x5 = c(1732, 1697, 1662, 1598, 1541, 1709, 1669, 1640, 1572, 1522,
+             1740, 1711, 1682, 1630, 1572, 1704, 1679, 1642, 1576, 1528,
+             1748, 1713, 1684, 1624, 1569, 1746, 1714, 1679, 1621, 1561,
+             1729, 1692, 1667, 1609, 1552, 1758, 1729, 1690, 1616, 1569),
+      x6 = c(99, 100, 97, 97, 97, 87, 87, 87, 85, 85,
+             101, 100, 100, 100, 101, 98, 96, 94, 94, 94,
+             101, 100, 100, 99, 100, 99, 99, 99, 99, 99,
+             102, 101, 101, 101, 101, 100, 99, 99, 99, 100)
+    )
+    
+    # Store in package environment
+    .datatrans_env$turbine_data <- turbine_data
+    return(turbine_data)
+    
+  } else {
+    # Load from file
+    if (grepl("\\.xlsx?$", filepath, ignore.case = TRUE)) {
+      if (!requireNamespace("readxl", quietly = TRUE)) {
+        stop("Package 'readxl' is required to read Excel files")
+      }
+      data <- readxl::read_excel(filepath)
+    } else if (grepl("\\.csv$", filepath, ignore.case = TRUE)) {
+      data <- utils::read.csv(filepath)
+    } else {
+      stop("Unsupported file format. Please use .xlsx, .xls, or .csv")
+    }
+    
+    return(tibble::as_tibble(data))
+  }
+}
+```
+
+```{r}
+#' Normalize Numerical Variables
+#'
+#' @description
+#' Standardizes numerical variables using z-score normalization or min-max scaling.
+#' Particularly useful for engineering datasets where variables have different scales.
+#'
+#' @param data A data frame or tibble containing the data to normalize
+#' @param method Character string specifying the normalization method.
+#'   Options: "zscore" (default) or "minmax"
+#' @param exclude Character vector of column names to exclude from normalization
+#' @param verbose Logical indicating whether to print progress messages
+#'
+#' @return A tibble with normalized numerical columns
+#'
+#' @examples
+#' \dontrun{
+#' data <- load_turbine_data()
+#' normalized <- normalize_data(data, method = "zscore")
+#' }
+#'
+#' @export
+normalize_data <- function(data, method = c("zscore", "minmax"), 
+                          exclude = NULL, verbose = TRUE) {
+  
+  # Input validation
+  if (!is.data.frame(data)) {
+    stop("Input must be a data frame or tibble")
+  }
+  
+  method <- match.arg(method)
+  
+  # Convert to tibble if not already
+  data <- tibble::as_tibble(data)
+  
+  # Identify numerical columns
+  num_cols <- names(data)[sapply(data, is.numeric)]
+  
+  # Remove excluded columns
+  if (!is.null(exclude)) {
+    num_cols <- setdiff(num_cols, exclude)
+  }
+  
+  if (length(num_cols) == 0) {
+    if (verbose) warning("No numerical columns found to normalize")
+    return(data)
+  }
+  
+  if (verbose) {
+    message(sprintf("DataTrans: Normalizing %d columns using %s method", 
+                   length(num_cols), method))
+    message(sprintf("Columns: %s", paste(num_cols, collapse = ", ")))
+  }
+  
+  # Apply normalization
+  result <- data %>%
+    dplyr::mutate(dplyr::across(
+      dplyr::all_of(num_cols),
+      ~ {
+        if (method == "zscore") {
+          # Z-score normalization
+          if (sd(.x, na.rm = TRUE) == 0) {
+            warning("Standard deviation is zero for a column. Returning original values.")
+            return(.x)
+          }
+          (.x - mean(.x, na.rm = TRUE)) / sd(.x, na.rm = TRUE)
+        } else {
+          # Min-max normalization
+          min_val <- min(.x, na.rm = TRUE)
+          max_val <- max(.x, na.rm = TRUE)
+          if (max_val == min_val) {
+            warning("Min and max are equal for a column. Returning original values.")
+            return(.x)
+          }
+          (.x - min_val) / (max_val - min_val)
+        }
+      },
+      .names = "{.col}_norm"
+    ))
+  
+  if (verbose) {
+    message("DataTrans: Normalization completed successfully")
+    
+    # Show summary of normalized columns
+    norm_summary <- result %>%
+      dplyr::select(dplyr::ends_with("_norm")) %>%
+      dplyr::summarise(dplyr::across(dplyr::everything(), 
+                                    list(mean = mean, sd = sd), 
+                                    na.rm = TRUE))
+    
+    if (method == "zscore") {
+      message("Z-score normalization check:")
+      message("  Expected means ≈ 0, standard deviations ≈ 1")
+    } else {
+      message("Min-max normalization check:")
+      message("  Expected ranges: 0 to 1")
+    }
+  }
+  
+  return(result)
+}
+```
+
+```{r}
+#' Clean Engineering Dataset
+#'
+#' @description
+#' Performs comprehensive cleaning of engineering datasets including:
+#' - Removing duplicate rows
+#' - Handling missing values
+#' - Removing constant columns
+#' - Basic outlier filtering (optional)
+#'
+#' @param data A data frame or tibble
+#' @param remove_duplicates Logical, remove duplicate rows (default: TRUE)
+#' @param handle_missing Method for handling missing values: 
+#'   "remove", "mean", "median", or "knn" (default: "remove")
+#' @param remove_constant Logical, remove columns with zero variance (default: TRUE)
+#' @param outlier_threshold Z-score threshold for outlier removal (default: 3.5, set to NULL to skip)
+#' @param verbose Logical, print progress messages (default: TRUE)
+#'
+#' @return A cleaned tibble
+#'
+#' @export
+clean_engineering_data <- function(data, 
+                                   remove_duplicates = TRUE,
+                                   handle_missing = c("remove", "mean", "median", "knn"),
+                                   remove_constant = TRUE,
+                                   outlier_threshold = 3.5,
+                                   verbose = TRUE) {
+  
+  if (!is.data.frame(data)) {
+    stop("Input must be a data frame or tibble")
+  }
+  
+  handle_missing <- match.arg(handle_missing)
+  original_rows <- nrow(data)
+  original_cols <- ncol(data)
+  
+  if (verbose) {
+    message("DataTrans: Starting data cleaning process")
+    message(sprintf("  Original dimensions: %d rows × %d columns", 
+                   original_rows, original_cols))
+  }
+  
+  # Convert to tibble
+  data <- tibble::as_tibble(data)
+  
+  # 1. Remove duplicates
+  if (remove_duplicates) {
+    data <- dplyr::distinct(data)
+    if (verbose) {
+      duplicates_removed <- original_rows - nrow(data)
+      if (duplicates_removed > 0) {
+        message(sprintf("  Removed %d duplicate rows", duplicates_removed))
+      }
+    }
+  }
+  
+  # 2. Handle missing values
+  na_count <- sum(is.na(data))
+  if (na_count > 0) {
+    if (verbose) {
+      message(sprintf("  Found %d missing values", na_count))
+    }
+    
+    if (handle_missing == "remove") {
+      data <- tidyr::drop_na(data)
+      if (verbose) {
+        message("  Removed rows with missing values")
+      }
+    } else {
+      # Impute missing values
+      num_cols <- names(data)[sapply(data, is.numeric)]
+      
+      for (col in num_cols) {
+        na_idx <- is.na(data[[col]])
+        
+        if (any(na_idx)) {
+          if (handle_missing == "mean") {
+            imp_val <- mean(data[[col]], na.rm = TRUE)
+          } else if (handle_missing == "median") {
+            imp_val <- median(data[[col]], na.rm = TRUE)
+          } else if (handle_missing == "knn") {
+            # Simple mean imputation (for simplicity)
+            # In production, use proper KNN imputation
+            imp_val <- mean(data[[col]], na.rm = TRUE)
+          }
+          
+          data[[col]][na_idx] <- imp_val
+        }
+      }
+      
+      if (verbose) {
+        message(sprintf("  Imputed missing values using %s method", handle_missing))
+      }
+    }
+  }
+  
+  # 3. Remove constant columns
+  if (remove_constant) {
+    constant_cols <- sapply(data, function(x) {
+      if (is.numeric(x)) {
+        var(x, na.rm = TRUE) == 0
+      } else {
+        FALSE
+      }
+    })
+    
+    if (any(constant_cols)) {
+      data <- data[, !constant_cols]
+      if (verbose) {
+        message(sprintf("  Removed %d constant columns", sum(constant_cols)))
+      }
+    }
+  }
+  
+  # 4. Remove extreme outliers (optional)
+  if (!is.null(outlier_threshold)) {
+    num_cols <- names(data)[sapply(data, is.numeric)]
+    outlier_rows <- integer(0)
+    
+    for (col in num_cols) {
+      z_scores <- abs(scale(data[[col]]))
+      outlier_rows <- union(outlier_rows, which(z_scores > outlier_threshold))
+    }
+    
+    if (length(outlier_rows) > 0) {
+      data <- data[-outlier_rows, ]
+      if (verbose) {
+        message(sprintf("  Removed %d rows with extreme outliers", length(outlier_rows)))
+      }
+    }
+  }
+  
+  if (verbose) {
+    message(sprintf("  Final dimensions: %d rows × %d columns", 
+                   nrow(data), ncol(data)))
+    message("DataTrans: Data cleaning completed")
+  }
+  
+  return(data)
+}
+```
+
+```{r}
+#' Analyze Variable Correlations
+#'
+#' @description
+#' Computes and visualizes correlations between variables in a dataset.
+#' Particularly useful for identifying relationships in engineering data.
+#'
+#' @param data A data frame or tibble
+#' @param target_var Optional target variable for computing correlations
+#' @param method Correlation method: "pearson" (default), "spearman", or "kendall"
+#' @param plot Logical, whether to create a correlation heatmap (default: TRUE)
+#' @param threshold Minimum absolute correlation to highlight (default: 0.7)
+#'
+#' @return A list containing:
+#' \itemize{
+#'   \item correlation_matrix: Full correlation matrix
+#'   \item target_correlations: Correlations with target variable (if provided)
+#'   \item strong_correlations: Pairs with |correlation| > threshold
+#' }
+#'
+#' @export
+analyze_correlations <- function(data, target_var = NULL, 
+                                 method = c("pearson", "spearman", "kendall"),
+                                 plot = TRUE, threshold = 0.7) {
+  
+  if (!is.data.frame(data)) {
+    stop("Input must be a data frame or tibble")
+  }
+  
+  method <- match.arg(method)
+  
+  # Select only numerical columns
+  num_data <- data[, sapply(data, is.numeric)]
+  
+  if (ncol(num_data) < 2) {
+    stop("Need at least 2 numerical columns for correlation analysis")
+  }
+  
+  # Compute correlation matrix
+  cor_matrix <- cor(num_data, use = "complete.obs", method = method)
+  
+  # Find strong correlations
+  strong_pairs <- which(abs(cor_matrix) > threshold & 
+                         upper.tri(cor_matrix), arr.ind = TRUE)
+  
+  strong_correlations <- data.frame(
+    Variable1 = rownames(cor_matrix)[strong_pairs[, 1]],
+    Variable2 = colnames(cor_matrix)[strong_pairs[, 2]],
+    Correlation = cor_matrix[strong_pairs]
+  )
+  
+  # Sort by absolute correlation
+  strong_correlations <- strong_correlations[
+    order(abs(strong_correlations$Correlation), decreasing = TRUE),
+  ]
+  
+  # Target variable correlations
+  target_cor <- NULL
+  if (!is.null(target_var)) {
+    if (target_var %in% colnames(num_data)) {
+      target_cor <- cor_matrix[, target_var, drop = FALSE]
+      target_cor <- target_cor[rownames(target_cor) != target_var, , drop = FALSE]
+      colnames(target_cor) <- "Correlation"
+      target_cor <- target_cor[order(abs(target_cor), decreasing = TRUE), , drop = FALSE]
+    } else {
+      warning(sprintf("Target variable '%s' not found in numerical columns", target_var))
+    }
+  }
+  
+  # Create plot if requested
+  if (plot && requireNamespace("ggplot2", quietly = TRUE)) {
+    # Prepare data for heatmap
+    cor_df <- as.data.frame(as.table(cor_matrix))
+    names(cor_df) <- c("Var1", "Var2", "Correlation")
+    
+    # Remove diagonal and lower triangle
+    cor_df <- cor_df[cor_df$Var1 != cor_df$Var2, ]
+    cor_df <- cor_df[order(cor_df$Var1, cor_df$Var2), ]
+    
+    # Create heatmap
+    p <- ggplot2::ggplot(cor_df, ggplot2::aes(x = Var1, y = Var2, fill = Correlation)) +
+      ggplot2::geom_tile(color = "white") +
+      ggplot2::scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                                   midpoint = 0, limit = c(-1, 1)) +
+      ggplot2::theme_minimal() +
+      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)) +
+      ggplot2::labs(
+        title = "Correlation Matrix",
+        x = "",
+        y = "",
+        fill = "Correlation"
+      ) +
+      ggplot2::coord_fixed()
+    
+    print(p)
+  }
+  
+  # Return results
+  result <- list(
+    correlation_matrix = cor_matrix,
+    target_correlations = target_cor,
+    strong_correlations = strong_correlations,
+    method = method
+  )
+  
+  return(result)
+}
+```
+
+```{r}
+#' Plot Turbine Performance Relationships
+#'
+#' @description
+#' Creates visualization plots for turbine performance analysis.
+#' Shows relationships between thrust (y) and predictor variables.
+#'
+#' @param data Turbine dataset (from load_turbine_data())
+#' @param x_var Predictor variable to plot against thrust (default: "x1")
+#' @param plot_type Type of plot: "scatter" (default), "histogram", or "boxplot"
+#' @param add_regression Logical, add regression line to scatter plot (default: TRUE)
+#' @param color_by Optional variable for color coding points
+#'
+#' @return A ggplot object
+#'
+#' @export
+plot_turbine_performance <- function(data, 
+                                     x_var = "x1",
+                                     plot_type = c("scatter", "histogram", "boxplot"),
+                                     add_regression = TRUE,
+                                     color_by = NULL) {
+  
+  plot_type <- match.arg(plot_type)
+  
+  if (!x_var %in% names(data)) {
+    stop(sprintf("Variable '%s' not found in dataset", x_var))
+  }
+  
+  if (!"y" %in% names(data)) {
+    stop("Response variable 'y' not found in dataset")
+  }
+  
+  # Create plot based on type
+  if (plot_type == "scatter") {
+    p <- ggplot2::ggplot(data, ggplot2::aes(x = .data[[x_var]], y = y))
+    
+    if (!is.null(color_by) && color_by %in% names(data)) {
+      p <- p + ggplot2::geom_point(ggplot2::aes(color = .data[[color_by]]), 
+                                   alpha = 0.7, size = 2)
+    } else {
+      p <- p + ggplot2::geom_point(alpha = 0.7, size = 2, color = "steelblue")
+    }
+    
+    if (add_regression) {
+      p <- p + ggplot2::geom_smooth(method = "lm", se = TRUE, 
+                                    color = "darkred", alpha = 0.2)
+    }
+    
+    p <- p + ggplot2::labs(
+      title = sprintf("Turbine Thrust vs %s", x_var),
+      x = x_var,
+      y = "Thrust (y)",
+      color = if (!is.null(color_by)) color_by else NULL
+    )
+    
+  } else if (plot_type == "histogram") {
+    p <- ggplot2::ggplot(data, ggplot2::aes(x = y)) +
+      ggplot2::geom_histogram(bins = 15, fill = "steelblue", alpha = 0.7, color = "white") +
+      ggplot2::labs(
+        title = "Distribution of Turbine Thrust",
+        x = "Thrust (y)",
+        y = "Frequency"
+      )
+    
+  } else if (plot_type == "boxplot") {
+    # Create categorical version of x_var for boxplot
+    if (is.numeric(data[[x_var]])) {
+      data[[paste0(x_var, "_cat")]] <- cut(data[[x_var]], breaks = 5)
+      x_var_plot <- paste0(x_var, "_cat")
+    } else {
+      x_var_plot <- x_var
+    }
+    
+    p <- ggplot2::ggplot(data, ggplot2::aes(x = .data[[x_var_plot]], y = y)) +
+      ggplot2::geom_boxplot(fill = "steelblue", alpha = 0.7) +
+      ggplot2::geom_jitter(width = 0.2, alpha = 0.5, size = 1) +
+      ggplot2::labs(
+        title = sprintf("Thrust Distribution by %s", x_var),
+        x = x_var,
+        y = "Thrust (y)"
+      ) +
+      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+  }
+  
+  p <- p + ggplot2::theme_minimal()
+  
+  return(p)
+}
+```
+
+```{r}
+#' Summarize Dataset Statistics
+#'
+#' @description
+#' Provides comprehensive statistical summary of a dataset.
+#' Includes counts, means, standard deviations, and missing values.
+#'
+#' @param data A data frame or tibble
+#' @param detailed Logical, include detailed percentiles (default: FALSE)
+#'
+#' @return A list containing summary statistics
+#'
+#' @export
+summarize_dataset <- function(data, detailed = FALSE) {
+  
+  if (!is.data.frame(data)) {
+    stop("Input must be a data frame or tibble")
+  }
+  
+  # Basic information
+  basic_info <- list(
+    n_rows = nrow(data),
+    n_cols = ncol(data),
+    n_numeric = sum(sapply(data, is.numeric)),
+    n_factor = sum(sapply(data, is.factor)),
+    n_character = sum(sapply(data, is.character)),
+    n_logical = sum(sapply(data, is.logical)),
+    total_missing = sum(is.na(data))
+  )
+  
+  # Summary for numeric columns
+  num_cols <- names(data)[sapply(data, is.numeric)]
+  numeric_summary <- list()
+  
+  if (length(num_cols) > 0) {
+    numeric_summary <- lapply(num_cols, function(col) {
+      col_data <- data[[col]]
+      stats <- list(
+        mean = mean(col_data, na.rm = TRUE),
+        sd = sd(col_data, na.rm = TRUE),
+        min = min(col_data, na.rm = TRUE),
+        max = max(col_data, na.rm = TRUE),
+        median = median(col_data, na.rm = TRUE),
+        missing = sum(is.na(col_data)),
+        missing_pct = sum(is.na(col_data)) / length(col_data) * 100
+      )
+      
+      if (detailed) {
+        stats$q1 <- quantile(col_data, 0.25, na.rm = TRUE)
+        stats$q3 <- quantile(col_data, 0.75, na.rm = TRUE)
+        stats$iqr <- stats$q3 - stats$q1
+        stats$skewness <- moments::skewness(col_data, na.rm = TRUE)
+        stats$kurtosis <- moments::kurtosis(col_data, na.rm = TRUE)
+      }
+      
+      return(stats)
+    })
+    
+    names(numeric_summary) <- num_cols
+  }
+  
+  # Summary for categorical columns
+  cat_cols <- names(data)[sapply(data, function(x) is.factor(x) | is.character(x))]
+  categorical_summary <- list()
+  
+  if (length(cat_cols) > 0) {
+    categorical_summary <- lapply(cat_cols, function(col) {
+      col_data <- data[[col]]
+      list(
+        n_unique = length(unique(col_data)),
+        top_categories = names(sort(table(col_data), decreasing = TRUE))[1:3],
+        missing = sum(is.na(col_data)),
+        missing_pct = sum(is.na(col_data)) / length(col_data) * 100
+      )
+    })
+    
+    names(categorical_summary) <- cat_cols
+  }
+  
+  # Return comprehensive summary
+  result <- list(
+    basic_info = basic_info,
+    numeric_summary = numeric_summary,
+    categorical_summary = categorical_summary,
+    column_names = names(data),
+    data_types = sapply(data, class)
+  )
+  
+  class(result) <- "DataTransSummary"
+  return(result)
+}
+
+#' Print method for DataTransSummary
+#'
+#' @param x DataTransSummary object
+#' @param ... Additional arguments
+#'
+#' @export
+print.DataTransSummary <- function(x, ...) {
+  cat("=== DataTrans Dataset Summary ===\n\n")
+  
+  cat("Basic Information:\n")
+  cat(sprintf("  Rows: %d\n", x$basic_info$n_rows))
+  cat(sprintf("  Columns: %d\n", x$basic_info$n_cols))
+  cat(sprintf("  Numeric columns: %d\n", x$basic_info$n_numeric))
+  cat(sprintf("  Categorical columns: %d\n", x$basic_info$n_factor + x$basic_info$n_character))
+  cat(sprintf("  Total missing values: %d\n", x$basic_info$total_missing))
+  
+  if (length(x$numeric_summary) > 0) {
+    cat("\nNumeric Columns Summary:\n")
+    for (col in names(x$numeric_summary)) {
+      stats <- x$numeric_summary[[col]]
+      cat(sprintf("\n  %s:\n", col))
+      cat(sprintf("    Mean: %.2f, SD: %.2f\n", stats$mean, stats$sd))
+      cat(sprintf("    Min: %.2f, Max: %.2f, Median: %.2f\n", 
+                 stats$min, stats$max, stats$median))
+      cat(sprintf("    Missing: %d (%.1f%%)\n", stats$missing, stats$missing_pct))
+    }
+  }
+  
+  if (length(x$categorical_summary) > 0) {
+    cat("\nCategorical Columns Summary:\n")
+    for (col in names(x$categorical_summary)) {
+      stats <- x$categorical_summary[[col]]
+      cat(sprintf("\n  %s:\n", col))
+      cat(sprintf("    Unique values: %d\n", stats$n_unique))
+      if (length(stats$top_categories) > 0) {
+        cat(sprintf("    Top categories: %s\n", 
+                   paste(stats$top_categories, collapse = ", ")))
+      }
+    }
+  }
+  
+  cat("\n=== End Summary ===\n")
+}
+```
+
+
+
+```{r}
+
+library(DataTrans)
+library(DataTrans)
+
+
+boxcox_transform(c(1, 10, 100), lambda = 0.5)
+log_transform(c(1, 10, 100))
+minmax_normalization(c(1, 2, 3, 4, 5))
+```
+
+```{r}
+library(DataTrans)
+library(readxl)
+
+# Load necessary libraries
+library(DataTrans)
+library(readxl)
+
+# Import the dataset
+turbine_data <- read_excel("turbine_thrust.XLS", sheet = "Sheet1")
+View(turbine_data)
+
+# Inspect the dataset
+print("Dataset Summary:")
+print(summary(turbine_data))
+
+print("Dataset Head:")
+print(head(turbine_data))
+
+# Check column names
+print("Column Names:")
+print(names(turbine_data))
+
+# Replace "y" with your actual numeric column name if different
+numeric_column_name <- "y"
+
+if (!numeric_column_name %in% names(turbine_data)) {
+    stop(paste("Column", numeric_column_name, "not found in the dataset."))
+}
+
+numeric_column <- turbine_data[[numeric_column_name]]
+
+# Ensure no missing values (optional)
+numeric_column <- na.omit(numeric_column)
+
+# Check if values are positive (for Box-Cox and Log transformations)
+print(paste("Minimum value in", numeric_column_name, ":", min(numeric_column)))
+print(paste("Maximum value in", numeric_column_name, ":", max(numeric_column)))
+
+# 1. Box-Cox Transformation
+print("Applying Box-Cox Transformation...")
+
+tryCatch({
+    boxcox_result <- boxcox_transform(numeric_column)
+    print(head(boxcox_result))
+}, error = function(e) print(paste("Error in Box-Cox Transformation:", e)))
+
+# 2. Log Transformation
+print("Applying Log Transformation...")
+
+tryCatch({
+    log_result <- log_transform(numeric_column)
+    print(head(log_result))
+}, error = function(e) print(paste("Error in Log Transformation:", e)))
+
+# 3. Min-Max Normalization
+print("Applying Min-Max Normalization...")
+
+tryCatch({
+    minmax_result <- minmax_normalization(numeric_column)
+    print(head(minmax_result))
+}, error = function(e) print(paste("Error in Min-Max Normalization:", e)))
+
+# 4. Moving Average
+print("Calculating Moving Average...")
+
+tryCatch({
+    # Check function signature - might be different parameter name
+    moving_avg_result <- moving_average(numeric_column, window_size = 5)
+    print(head(moving_avg_result))
+}, error = function(e) {
+    print(paste("Error in Moving Average:", e))
+    # Try alternative parameter name
+    tryCatch({
+        moving_avg_result <- moving_average(numeric_column, n = 5)
+        print(head(moving_avg_result))
+    }, error = function(e2) print(paste("Alternative also failed:", e2)))
+})
+
+# If you want to try other transformations from the package:
+print("Available functions in DataTrans package:")
+print(ls("package:DataTrans"))
+
+# Additional transformations you might want to try:
+
+# 5. Polynomial Transform
+print("Applying Polynomial Transform...")
+tryCatch({
+    poly_result <- polynomial_transform(numeric_column, degree = 2)
+    print(head(poly_result))
+}, error = function(e) print(paste("Error in Polynomial Transform:", e)))
+
+# 6. Score Transform
+print("Applying Score Transform...")
+tryCatch({
+    score_result <- score_transform(numeric_column)
+    print(head(score_result))
+}, error = function(e) print(paste("Error in Score Transform:", e)))
+
+```
+
